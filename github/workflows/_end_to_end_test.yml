@@ -1,76 +1,13 @@
-name: Rust & Leptos CI for unikt testing, fmt, linting, and e2e testing
+# .github/workflows/_end_to_end_test.yml
+name: End to End Testing
 
 on:
-  push:
-    branches:
-      - main
-      - development
-  pull_request:
-    branches:
-      - main
-      - development
+  workflow_call:
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  test:
-    name: Rust Unit Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: Swatinem/rust-cache@v2
-
-      - name: Run cargo tests
-        run: cargo test
-
-  fmt:
-    name: Rustfmt Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
-
-      - name: Check formatting
-        run: cargo fmt --check
-
-  clippy:
-    name: Clippy Linting
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-
-      - uses: Swatinem/rust-cache@v2
-
-      - name: Run clippy
-        run: cargo clippy -- -D warnings
-
-  coverage:
-    name: Code Coverage
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: Swatinem/rust-cache@v2
-
-      - name: Install tarpaulin
-        run: cargo install cargo-tarpaulin
-
-      - name: Run tarpaulin
-        run: cargo tarpaulin --verbose --workspace
-
   e2e:
     name: End-to-End Tests (Playwright)
     runs-on: ubuntu-22.04
@@ -103,7 +40,7 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             end2end/package-lock.json
-      
+
       - name: 📦 Install root-level npm dependencies (e.g. Tailwind, daisyui)
         run: npm ci
 

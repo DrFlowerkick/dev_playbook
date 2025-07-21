@@ -1,0 +1,9 @@
+name: Weekly security + maintenance checks
+
+on:
+  schedule:
+    - cron: "0 3 * * 0" # every sunday 03:00 UTC
+
+jobs:
+  audit:
+    uses: ./.github/workflows/_audit.yml

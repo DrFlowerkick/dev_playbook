@@ -16,19 +16,19 @@ DEV_RUSTFLAGS=RUSTFLAGS="--cfg erase_components"
 
 .PHONY: fmt
 fmt:
-    cargo fmt && leptosfmt ./**/*.rs
+    leptosfmt ./**/*.rs && cargo fmt
 
 # -------- Leptos clippy --------
 
 .PHONY: clippy
-fmt:
+clippy:
     cargo clippy
 
-# -------- Leptos fmt + clippy --------
+# -------- Leptos lint: fmt + clippy --------
 
-.PHONY: fmt-clippy
-fmt:
-    cargo fmt && leptosfmt ./**/*.rs && cargo clippy
+.PHONY: lint
+lint:
+    leptosfmt ./**/*.rs && cargo fmt && cargo clippy
 
 # -------- SSR example-project
 
@@ -43,6 +43,23 @@ build-example-project:
 .PHONY: run-example-project
 run-example-project:
     $(CARGO_LEPTOS) serve --release
+
+# -------- Set release tag to build docker on github --------
+# only use this, if you do not use release-please
+
+.PHONY: release-tag
+release-tag:
+    @echo "🔍 Lese Version aus Cargo.toml..."
+    @VERSION=$$(grep '^version =' Cargo.toml | sed -E 's/version = "(.*)"/\1/') && \
+    TAG="v$$VERSION" && \
+    echo "🏷  Erzeuge Git-Tag: $$TAG" && \
+    if git rev-parse "$$TAG" >/dev/null 2>&1; then \
+        echo "❌ Tag '$$TAG' existiert bereits. Abbruch."; \
+        exit 1; \
+    fi && \
+    git tag "$$TAG" && \
+    git push origin "$$TAG" && \
+    echo "✅ Git-Tag '$$TAG' erfolgreich erstellt und gepusht."
 
 # -------- Cleanup --------
 

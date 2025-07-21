@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# setup-leptos: Erstellt ein neues Leptos-Projekt mit Tailwind & Playwright
+# Usage: setup-leptos <projektname>
 set -e
 
 # Prüfe, ob ein Projektname übergeben wurde
@@ -11,20 +13,20 @@ fi
 # Projektname aus erstem Argument
 PROJECT_NAME="$1"
 
-# 1. Leptos Template initialisieren
-cargo leptos new "$PROJECT_NAME" --git https://github.com/leptos-rs/start-axum
+echo "1. Leptos Template initialisieren mit Projektname $PROJECT_NAME initialisieren"
+cargo leptos new --name "$PROJECT_NAME" --git https://github.com/leptos-rs/start-axum
 cd "$PROJECT_NAME"
 
-# 2. npm initialisieren
+echo "2. npm initialisieren"
 npm init -y
 
-# 3. .gitignore ergänzen, falls nicht vorhanden
+echo "3. .gitignore um node_modules ergänzen"
 echo -e "\n# Node.js\nnode_modules/" >> .gitignore
 
-# 4. tailwindcss und daisyUI installieren
+echo "4. tailwindcss und daisyUI installieren"
 npm install -D tailwindcss @tailwindcss/cli daisyui@latest
 
-# 5. input.css anlegen
+echo "5. input.css anlegen"
 mkdir -p style
 cat <<EOF > style/input.css
 @import "tailwindcss";
@@ -34,16 +36,16 @@ cat <<EOF > style/input.css
 }
 EOF
 
-# 6. Cargo.toml anpassen
+echo "6. Cargo.toml CSS config anpassen"
 sed -i 's|style-file = "style/main.scss"|tailwind-input-file = "style/input.css"|' Cargo.toml
 rm -f style/main.scss
 
-# 7. Playwright Pakete installieren
+echo "7. Playwright Pakete installieren"
 cd end2end
 npm ci
 cd ..
 
-# 8. e2e-testing.sh anlegen
+echo "8. e2e-testing.sh anlegen"
 mkdir -p scripts
 cat <<'EOF' > scripts/e2e-testing.sh
 #!/usr/bin/env bash
@@ -75,10 +77,10 @@ EOF
 
 chmod +x scripts/e2e-testing.sh
 
-# 9. Cargo.toml um end2end-cmd ergänzen
+echo "9. Cargo.toml um end2end-cmd ergänzen"
 grep -q 'end2end-cmd' Cargo.toml || echo 'end2end-cmd = "./scripts/e2e-testing.sh"' >> Cargo.toml
 
-# 10. .cargo/config.toml anlegen
+echo "10. .cargo/config.toml anlegen"
 mkdir -p .cargo
 cat <<EOF > .cargo/config.toml
 [target.wasm32-unknown-unknown]
@@ -92,7 +94,7 @@ linker = "clang"
 rustflags = ["-C", "link-arg=-fuse-ld=lld"]
 EOF
 
-# 11. ./vscode/settings.json schreiben
+echo "11. ./vscode/settings.json schreiben"
 mkdir -p .vscode
 cat << 'EOF' > .vscode/settings.json
 {
@@ -143,7 +145,102 @@ cat << 'EOF' > .vscode/settings.json
 }
 EOF
 
+echo "12. .prettierignore schreiben"
+cat << 'EOF' >  .prettierignore
+#*.rs
+target/
+EOF
+
+echo "13. .markdownlint-cli2.yaml schreiben"
+cat << 'EOF' >  .markdownlint-cli2.yaml
+# .markdownlint-cli2.yaml
+config: .markdownlint.json
+ignores:
+  - "LICENSE"
+EOF
+
+echo "14. Makefile schreiben"
+cat << EOF >  Makefile
+# -------- variables --------
+
+CARGO_LEPTOS=cargo leptos
+
+# use this flags when developing for faster compile
+DEV_RUSTFLAGS=RUSTFLAGS="--cfg erase_components"
+
+# -------- Leptos fmt --------
+
+.PHONY: fmt
+fmt:
+    leptosfmt ./**/*.rs && cargo fmt
+
+# -------- Leptos clippy --------
+
+.PHONY: clippy
+clippy:
+    cargo clippy
+
+# -------- Leptos lint: fmt + clippy --------
+
+.PHONY: lint
+lint:
+    leptosfmt ./**/*.rs && cargo fmt && cargo clippy
+
+# -------- SSR --------
+
+.PHONY: dev-$PROJECT_NAME
+dev-$PROJECT_NAME:
+    \$(DEV_RUSTFLAGS) \$(CARGO_LEPTOS) watch
+
+.PHONY: build-$PROJECT_NAME
+build-$PROJECT_NAME:
+    \$(CARGO_LEPTOS) build --release
+
+.PHONY: run-$PROJECT_NAME
+run-$PROJECT_NAME:
+    \$(CARGO_LEPTOS) serve --release
+
+# -------- Set release tag to build docker on github --------
+# only use this, if you do not use release-please
+
+.PHONY: release-tag
+release-tag:
+	@echo "🔍 Lese Version aus Cargo.toml..."
+	@VERSION=$$(grep '^version =' Cargo.toml | sed -E 's/version = "(.*)"/\1/') && \
+	TAG="v$$VERSION" && \
+	echo "🏷  Erzeuge Git-Tag: $$TAG" && \
+	if git rev-parse "$$TAG" >/dev/null 2>&1; then \
+		echo "❌ Tag '$$TAG' existiert bereits. Abbruch."; \
+		exit 1; \
+	fi && \
+	git tag "$$TAG" && \
+	git push origin "$$TAG" && \
+	echo "✅ Git-Tag '$$TAG' erfolgreich erstellt und gepusht."
+
+# -------- Cleanup --------
+
+.PHONY: clean
+clean:
+    cargo clean
+EOF
+
+echo "15. release-please-config.json schreiben"
+cat << 'EOF' >  release-please-config.json
+# release-please-config.json
+{
+  "release-type": "rust",
+  "packages": {
+    ".": {
+      "release-type": "rust"
+    }
+  }
+}
+EOF
+
+echo "16. Kopiere GitHub Workflows ins Projektverzeichnis..."
+cp -r "$(dirname "$0")/../github" ".github"
+
+
 echo "✅ Setup abgeschlossen für Projekt: $PROJECT_NAME"
-echo "Open github desktop -> File -> Add local repository..."
-echo "Passe bei Bedarf die LICENCE Datei in github an."
-echo "Nutze den Drei Branches Workflow für die Entwicklung."
+echo "➡️ Passe jetzt oder später das README.md für $PROJECT_NAME manuell an."
+echo "Verwende den 'github Project Repo' Guide, um für $PROJECT_NAME ein github Repository zu erstellen."

@@ -1,6 +1,8 @@
 # Leptos Axum Template in VSC und github aufsetzen
 
-Leptos bietet diverse Templates, um schnell ins Projekt einzusteigen. Im Folgenden wird das Axum Template verwendet und lokal für das Projekt vorbereitet.
+Leptos bietet diverse Templates, um schnell ins Projekt einzusteigen. Im Folgenden wird das Axum Template verwendet und lokal für das Projekt vorbereitet. Anstatt die vielen händischen Schritte selber durchzuführen, verwende stattdessen das Script `setup_leptos_project.sh` im `scripts` Ordner.
+
+Wenn du lokal deinen Projektordner aufgesetzt hast, geht es weiter mit der Einrichtung deines [Projekt Repository auf github](./github-project-repo.md).
 
 ## Inhaltsverzeichnis
 
@@ -12,8 +14,7 @@ Leptos bietet diverse Templates, um schnell ins Projekt einzusteigen. Im Folgend
 - [github workflows einrichten](#github-workflows-einrichten)
 - [Projektspezifische cargo Konfiguration](#projektspezifische-cargo-konfiguration)
 - [Nützliche Einstellungen für Visual Studio Code (VSC)](#nützliche-einstellungen-für-visual-studio-code-vsc)
-- [Projekt in GitHub einem neuen Repository hinzufügen](#projekt-in-github-einem-neuen-repository-hinzufügen)
-- [Lizenz vom Projekt in github anpassen](#lizenz-vom-projekt-in-github-anpassen)
+- [release-please Konfiguration anlegen](#release-please-konfiguration-anlegen)
 
 ## Projekt erstellen
 
@@ -137,15 +138,29 @@ end2end-cmd = "./scripts/e2e-testing.sh"
 
 ## Makefile
 
-Dies ist optinal, aber praktisch. Folge den Anleitung unter [Makefile mut rust verwenden](./make.md).
+Mit dem Makefile werden praktische Kommandos einfach über `make command` angeboten. Folge den Anleitung unter [Makefile mut rust verwenden](./make.md).
 
 ## github workflows einrichten
 
 Kopiere den Ordner `github` aus diesem Repo in deinen Projektordner und nenne den Ordner um nach `.github`. Damit werden die enthaltenen workflows mit dem nächsten commit automatisch aktiv.
 
-- `audit.yml` Gibt eregelmäßig Infos über Schwachstellen in den Rust Abhängigkeiten. Wenn dein Repo längere Zeit aktiv ist, wird github wahrscheinlich den Workflow deaktivieren.
-- `general.yml` Dein Schweizer-Taschenmesser Workflow inklusive 2e2 Testing für leptos.
-- `publish.yml` Ist nur notwendig, wenn du dein Projekt als Dockerimage in github veröffentlichen möchtest.
+### Funktionale workflows
+
+Alle funktionalen Workflows starten mit einem `_`. Sie bieten eine gewissese Funktionalität, die von anderen workflows genutzt werden kann. Sie stellen somit wiederverwendbare workflows dar, die in verschiedenen Phasen des Entwicklungsprozesses verwendet werden können. So können bei komplexen Featuren, die selber Sub-Branches benötigen, eigene workflows aus den funktionalen Workflows zusammen gesetzt werden. Als Vorlage hierfür können die workflows von `main` und `development` verwendet werden.
+
+### Branch workflows
+
+Branch workflows definieren, was passieren soll, wenn mit dem branch interagiert wird. Sie werden gestartet, wenn
+
+- ein push auf den Branch erfolgt (ohne postfix),
+- ein pull request auf den Branch erfolgt (`_pr` postfix),
+- oder nach einem bestimmten Zeitplan (`_scheduled` postfix).
+
+### Code veröffentlich mit `publish.yml`
+
+Der Workflow `publish.yml` wird ausgelöst, wein ein `v*.*.*` git tag gesetzt wird. Der Workflow prüft, ob dieser getagte commit mit dem letzten commit auf `main` übereoinstimmt. Wenn ja, dann erfolgt eine Veröffentlichung. Aktuell ist dies ein docker image auf dem github dockerf repository.
+
+Mit dem workflow _release-please.yml wird solch ein `v*.*.*` tag automatisch gesetzt, wenn seit dem letzten Aufruf des Workflows commits erfolgt sind, die eine Änderung der Versionierung verursachen. Weitere Details dazu sie [release-please](../workflows/release-please.md).
 
 ## Projektspezifische cargo Konfiguration
 
@@ -313,10 +328,19 @@ ignores:
   - "LICENSE"
 ```
 
-## Projekt in GitHub einem neuen Repository hinzufügen
+## release-please Konfiguration anlegen
 
-`github desktop` öffnen, `File -> Add local repository...` und Projektordner auswählen.
+```json
+# release-please-config.json
+{
+  "release-type": "rust",
+  "packages": {
+    ".": {
+      "release-type": "rust"
+    }
+  }
+}
+```
 
-## Lizenz vom Projekt in github anpassen
-
-Auf [github](https://github.com/DrFlowerkick?tab=repositories) das Projektrepo öffnen und die `LICENCE` Datei auswählen. Dann den entsprechenden Dialog auswählen, um die gewünschte Lizenz auszuwählen.
+---
+✅ Setup ist abgeschlossen

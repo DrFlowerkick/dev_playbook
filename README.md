@@ -20,9 +20,5 @@ insbesondere für Rust- und Leptos-Projekte.
 
 ### Workflows
 
-* [Drei-Branch-Workflow](workflows/three-branch-workflow.md)
+* [Branch-Workflow](workflows/branch-workflow.md)
 * [release-please Setup](workflows/release-please.md)
-
----
-
-> 📌 Tipp: Nutze dieses Repository als dein persönliches Entwickler-Wiki. Alle Dateien sind versioniert und lassen sich leicht erweitern.

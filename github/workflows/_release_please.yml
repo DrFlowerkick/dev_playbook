@@ -1,0 +1,22 @@
+# .github/workflows/release_please.yml
+name: release-please
+
+description: |
+  Functional workflow for release-please. Automatically creates a release PR with version bump,
+  changelog, and Git tag based on conventional commits.
+
+on:
+  workflow_call:
+
+jobs:
+  release:
+    name: Create release PR (release-please)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: google-github-actions/release-please-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          release-type: rust
+          target-branch: main
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

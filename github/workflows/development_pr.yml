@@ -1,0 +1,23 @@
+# .github/workflows/development.yml
+name: CI for development branch
+
+on:
+  pull_request:
+    branches:
+      - development
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lint:
+    uses: ./.github/workflows/_lint.yml
+
+  lint_leptos:
+    uses: ./.github/workflows/_lint_leptos.yml
+
+  test:
+    uses: ./.github/workflows/_test.yml
+
+  end_to_end_test:
+    uses: ./.github/workflows/_end_to_end_test.yml
