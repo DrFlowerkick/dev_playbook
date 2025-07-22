@@ -6,19 +6,21 @@ insbesondere für Rust- und Leptos-Projekte.
 
 ## 📁 Inhaltsverzeichnis
 
-### Rust Guides
+### Workflows
+
+* [github workflow guide](workflows/github-workflow.md)
+* [release-please commit guide](workflows/release-please.md)
+* [Development Workflow](workflows/development-workflow.md)
+
+### Setup-Anleitungen
+
+* [Projektordner mit erweitertem Leptos Axum Template erstellen](setup/leptos-template.md)
+* [Repository für Projekt in github aufsetzen](setup/github-project-repo.md)
+* [Makefile mit rust verwenden](setup/make.md)
+* [Rust und nützliche Cargo Erweiterungen](setup/rust-setup.md)
+
+### Online Rust Guides
 
 * [Rust Book](https://doc.rust-lang.org/book/)
 * [Leptos Book](https://book.leptos.dev/01_introduction.html)
 * [Rust Security Handbook](https://yevh.github.io/rust-security-handbook/)
-
-### Setup-Anleitungen
-
-* [Rust](setup/rust-setup.md)
-* [Makefile mut rust verwenden](setup/make.md)
-* [Leptos Axum Template in VSC und github aufsetzen](setup/leptos-template.md)
-
-### Workflows
-
-* [Branch-Workflow](workflows/branch-workflow.md)
-* [release-please Setup](workflows/release-please.md)
