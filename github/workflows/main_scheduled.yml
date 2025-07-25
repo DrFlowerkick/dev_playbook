@@ -5,5 +5,12 @@ on:
     - cron: "0 3 * * 0" # every sunday 03:00 UTC
 
 jobs:
+  marker:
+    name: Log branch workflow start
+    runs-on: ubuntu-latest
+    steps:
+      - name: Say hello
+        run: echo "Running main branch scheduled workflow..."
+
   audit:
     uses: ./.github/workflows/_audit.yml

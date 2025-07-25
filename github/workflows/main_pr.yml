@@ -10,6 +10,13 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  marker:
+    name: Log branch workflow start
+    runs-on: ubuntu-latest
+    steps:
+      - name: Say hello
+        run: echo "Running main branch pull request workflow..."
+
   lint:
     uses: ./.github/workflows/_lint.yml
 

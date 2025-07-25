@@ -36,7 +36,8 @@ cat <<EOF > style/input.css
 }
 EOF
 
-echo "6. Cargo.toml CSS config anpassen"
+echo "6. Cargo.toml ende2end-cmd und CSS config anpassen"
+sed -i 's|end2end-cmd = "npx playwright test"|end2end-cmd = "./scripts/e2e-testing.sh"|' Cargo.toml
 sed -i 's|style-file = "style/main.scss"|tailwind-input-file = "style/input.css"|' Cargo.toml
 rm -f style/main.scss
 
@@ -161,18 +162,22 @@ EOF
 
 echo "14. Makefile schreiben"
 cat << EOF >  Makefile
-# -------- variables --------
+# -------- Constants & Configuration --------
 
-CARGO_LEPTOS=cargo leptos
+CARGO_LEPTOS := cargo leptos
 
 # use this flags when developing for faster compile
-DEV_RUSTFLAGS=RUSTFLAGS="--cfg erase_components"
+DEV_RUSTFLAGS := RUSTFLAGS="--cfg erase_components"
 
-# -------- Leptos fmt --------
+# -------- App Configuration --------
+SERVER_NAME := $PROJECT_NAME
+WEB_PORT := 3000
+
+# -------- Code Formatting --------
 
 .PHONY: fmt
 fmt:
-    leptosfmt ./**/*.rs && cargo fmt
+	cargo fmt && leptosfmt ./**/*.rs
 
 # -------- Leptos clippy --------
 
@@ -186,19 +191,46 @@ clippy:
 lint:
     leptosfmt ./**/*.rs && cargo fmt && cargo clippy
 
-# -------- SSR --------
+# -------- Cleanup --------
 
-.PHONY: dev-$PROJECT_NAME
-dev-$PROJECT_NAME:
-    \$(DEV_RUSTFLAGS) \$(CARGO_LEPTOS) watch
+.PHONY: clean
+clean:
+	cargo clean
 
-.PHONY: build-$PROJECT_NAME
-build-$PROJECT_NAME:
-    \$(CARGO_LEPTOS) build --release
+# -------- SSR Build, E2E Test & & Run --------
 
-.PHONY: run-$PROJECT_NAME
-run-$PROJECT_NAME:
-    \$(CARGO_LEPTOS) serve --release
+.PHONY: dev-ssr
+dev-ssr:
+	\$(DEV_RUSTFLAGS) \$(CARGO_LEPTOS) watch
+
+.PHONY: e2e-ssr
+e2e-ssr:
+	\$(DEV_RUSTFLAGS) \$(CARGO_LEPTOS) end-to-end --release
+
+.PHONY: build-ssr
+build-ssr:
+	\$(CARGO_LEPTOS) build --release
+
+.PHONY: run-ssr
+run-ssr:
+	\$(CARGO_LEPTOS) serve --release
+
+# -------- Webserver Monitoring & Control --------
+
+.PHONY: webserver
+webserver:
+	@lsof -i :\$(WEB_PORT)
+
+.PHONY: kill-webserver
+kill-webserver:
+	@echo "🔍 Checking for running \$(SERVER_NAME) server on port \$(WEB_PORT)..."
+	@PID=\$\$(lsof -i :\$(WEB_PORT) -sTCP:LISTEN -t -a -c \$(SERVER_NAME)); \\
+	if [ -n "\$\$PID" ]; then \\
+		echo "🛑 Found \$(SERVER_NAME) (PID: \$\$PID), stopping it..."; \\
+		kill \$\$PID; \\
+	else \\
+		echo "✅ No \$(SERVER_NAME) server running on port \$(WEB_PORT)."; \\
+	fi
 
 # -------- Set release tag to build docker on github --------
 # only use this, if you do not use release-please
@@ -206,38 +238,19 @@ run-$PROJECT_NAME:
 .PHONY: release-tag
 release-tag:
 	@echo "🔍 Lese Version aus Cargo.toml..."
-	@VERSION=$$(grep '^version =' Cargo.toml | sed -E 's/version = "(.*)"/\1/') && \
-	TAG="v$$VERSION" && \
-	echo "🏷  Erzeuge Git-Tag: $$TAG" && \
-	if git rev-parse "$$TAG" >/dev/null 2>&1; then \
-		echo "❌ Tag '$$TAG' existiert bereits. Abbruch."; \
-		exit 1; \
-	fi && \
-	git tag "$$TAG" && \
-	git push origin "$$TAG" && \
-	echo "✅ Git-Tag '$$TAG' erfolgreich erstellt und gepusht."
-
-# -------- Cleanup --------
-
-.PHONY: clean
-clean:
-    cargo clean
+	@VERSION=\$\$(grep '^version =' Cargo.toml | sed -E 's/version = "(.*)"/\1/') && \\
+	TAG="v\$\$VERSION" && \\
+	echo "🏷  Erzeuge Git-Tag: \$\$TAG" && \\
+	if git rev-parse "\$\$TAG" >/dev/null 2>&1; then \\
+		echo "❌ Tag '\$\$TAG' existiert bereits. Abbruch."; \\
+		exit 1; \\
+	fi && \\
+	git tag "\$\$TAG" && \\
+	git push origin "\$\$TAG" && \\
+	echo "✅ Git-Tag '\$\$TAG' erfolgreich erstellt und gepusht."
 EOF
 
-echo "15. release-please-config.json schreiben"
-cat << 'EOF' >  release-please-config.json
-# release-please-config.json
-{
-  "release-type": "rust",
-  "packages": {
-    ".": {
-      "release-type": "rust"
-    }
-  }
-}
-EOF
-
-echo "16. Kopiere GitHub Workflows ins Projektverzeichnis..."
+echo "15. Kopiere GitHub Workflows ins Projektverzeichnis..."
 cp -r "$(dirname "$0")/../github" ".github"
 
 

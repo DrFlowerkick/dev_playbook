@@ -66,9 +66,22 @@ release-tag:
 .PHONY: clean
 clean:
     cargo clean
+
+# -------- check running webserver --------
+
+.PHONY: webserver
+webserver:
+    @lsof -i :3000
 ```
 
 `.PHONY` ist der name des Kommandos, dass man mit `make` aufruft, z.B.
 
 * `make fmt`
 * `make dev-example-project`
+
+Wenn ein Fehler angezeigt wie `Makefile:12: *** Fehlender Trenner.  Schluss.`, dann leigt das daran, dass die einzeige durch 4 spaces und nicht einem echten tab dargestellt sind. Um dies zu ändern gehe in vsc auf das Makefile.
+
+Dort siehst du etwas wie: `Spaces: 4 | UTF-8 | LF | Makefile`
+Klicke auf "Spaces: 4"
+Klicke auf "Convert Indentation to Tabs"
+Danach: "Indent Using Tabs"
