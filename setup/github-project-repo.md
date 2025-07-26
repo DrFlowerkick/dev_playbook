@@ -38,9 +38,11 @@ Du findest diese Einstellungen unter
 
 `GitHub Repo > ⚙️ Settings > General`
 
-und dann etwas nach unten scrollen. Setze die Einstellungen wie im Screenshot:
+und dann etwas nach unten scrollen. Setze die Einstellungen wie im Screenshot.
 
-![Pull Request Settings](./images/pull_request_settings.png).
+> 💡 **Hinweis:** Der [GitHub Workflow](../workflows/github-workflow.md) sieht nur _normale_ `merge commits` vor. `squash merging` ist zu vermeiden, da es zu **Duplikat Commits** beim resync von `development` führt. `rebase merging` ist im Workflow ebenfalls nicht vorgesehen.
+
+![Pull Request Settings](./images/pull_request_settings.png)
 
 ## 🔑 Personal access token (PAT) erstellen
 
@@ -62,7 +64,7 @@ Auf jeden Fall den Namen `RELEASE_PLEASE_PAT` verwenden.
 
 ## Workflow Berechtigungen für `🔁 Sync development with main` und `release-please` anpassen
 
-Im [`github workflow`](../workflows/github-workflow.md) wird erläutert, dass nach einem erfolgreichen `pull request` von `development` nach `main` die daraus resultierenden Änderungen in `main` wieder auf `development` zurückgespielt werden müssen. Dies ist aufgrund der Funktionsweise von git und aufgrund von **branch protection rules** (s.u.) etwas komplizieretr, weswegen hierfür der workflow [`sync_development_with_main.yml`](../github/workflows/sync_development_with_main.yml) erstellt wurde. Dieser workflow wie auch der `release-please` workflow nehmen schreibende Aktionen im repository vor und erzeugen einen `pull request`. Die hierfür notwendigen Workflow Permissions sind unter
+Im [`github workflow`](../workflows/github-workflow.md) wird erläutert, dass nach einem erfolgreichen `pull request` von `development` nach `main` die daraus resultierenden Änderungen in `main` wieder auf `development` zurück gespielt werden müssen. Dies ist aufgrund der Funktionsweise von git und aufgrund von **branch protection rules** (s.u.) etwas komplizierter, weswegen hierfür der workflow [`sync_development_with_main.yml`](../github/workflows/sync_development_with_main.yml) erstellt wurde. Dieser workflow wie auch der `release-please` workflow nehmen schreibende Aktionen im repository vor und erzeugen einen `pull request`. Die hierfür notwendigen Workflow Permissions sind unter
 
 `GitHub Repo > settings > Actions > General`
 
@@ -76,7 +78,45 @@ Das vorbereitete Projekt enthält den manuell ausführbaren Workflow [`bootstrap
 
 `GitHub Repo > Actions > GitHub Repo > 🚀 Bootstrap release-please`
 
-und klicke auf **Run workflow**. Dadurch werden die Konfigurationsdateien erstellt, committed und nach 'main' gepusht.
+und klicke auf **Run workflow**. Dadurch werden die Konfigurationsdateien erstellt und ein `pull request` erstellt, der gemergt werden muss.
+
+### Versionslabel in weiteren Dateien mit `release-please` verwalten
+
+`release-please` verwalten das `version` Label in `Cargo.toml`. Wenn dein Projekt weitere versionierte Artefakte enthält (z.B. einer Javascript Service Worker für lokal installierbare Web-Apps), deren Version synchron zur Version in `Cargo.toml` gehalten werden soll, dann kannst du dies über die Konfigurationsdatei `release-please-config.json` von `release-please` konfigurieren.
+
+> 💡 **Hinweis:** `release-please-config.json` wird durch den Bootstrap Vorgang erzeugt. Es bietet sich an, die Anpassung an der Datei in dem Branch vorzunehmen, der durch den Bootsrap Vorgang erstellt wurde.
+
+**Beispiel für `release-please-config.json`**
+
+```json
+{
+  "packages": {
+    ".": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "rust",
+      "bump-minor-pre-major": false,
+      "bump-patch-for-minor-pre-major": false,
+      "draft": false,
+      "prerelease": false,
+      "extra-files": [
+        {
+          "type": "generic",
+          "path": "public/sw.js"
+        }
+      ]
+    }
+  },
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
+}
+```
+
+In dieser Beispielkonfiguration soll die Datei `public/sw.js` ebenfalls versioniert werden. Dazu muss die Zeile, in der sich das Versionslabel befindet, mit dem tag `// x-release-please-version` markiert werden:
+
+```js
+const CACHE_NAME = "your_app_name-v0.0.0"; // x-release-please-version
+```
+
+Weitere Infos dazu siehe die entsprechende [`release-please`-Doku](https://github.com/googleapis/release-please/blob/d5f2ca8a2cf32701f1d87a85bbc37493b1db65c2/docs/customizing.md).
 
 ## Branch `development` von `main` erstellen
 
@@ -94,9 +134,7 @@ Sowohl `main` als auch `development` sollen nur über `pull request`s bearbeitet
 
 zu erstellen.
 
-> ⚠️ **Wichtig:** Es muss je branch ein eigenes ruleset erstellt werden, weil bei der Option **Require status checks to pass before merging** (s.u.) branch spezifische Workflows anzugeben sind. Des Weiteren erfordert die Resynchronisierung von `development` nach einem pull request nach `main` einen **Rebase and Merge**, so dass diese Option für `development` erlaubt sein muss, nicht aber für `main`.
-
-> 💡 **Hinweis:** Bei der Regel **Require a pull request before merging** kann über **Required approvals** die Anzahl der notwendigen Zustimmungen für einen `pull request` vorgegeben werden. Wenn man nicht alleine arbeitet, sollte dieser Wert **größer 0** sein.
+> ⚠️ **Wichtig:** Es muss je branch ein eigenes ruleset erstellt werden, weil bei der Option **Require status checks to pass before merging** (s.u.) branch spezifische Workflows anzugeben sind.
 
 ### Branch ruleset für 'main'
 
@@ -105,6 +143,8 @@ Im oberen Bereich Namen angeben, `Enforcement status` setzen und Branch Namen ei
 ![Branch ruleset oberer Bereich main](./images/branch_ruleset_main_01.png)
 
 ![Branch ruleset mittlerer Bereich main](./images/branch_ruleset_main_02.png)
+
+> 💡 **Hinweis:** Bei der Regel **Require a pull request before merging** kann über **Required approvals** die Anzahl der notwendigen Zustimmungen für einen `pull request` vorgegeben werden. Wenn man nicht alleine arbeitet, sollte dieser Wert **größer 0** sein.
 
 ![Branch ruleset unterer Bereich main](./images/branch_ruleset_main_03.png)
 
@@ -119,7 +159,7 @@ Achte bei `Allowed merge methods`, dass nur `Squash` ausgewählt ist. Die Option
 Die Regeln für `development` unterscheiden sich nur in zwei Punkten von `main`:
 
 1. Bei **Allowed merge methods** sind **Squash** und **Rebase** erlaubt.
-2. Bei den `required checks` entfäält der `Code Coverafe` check.
+2. Bei den `required checks` entfällt der `Code Coverage` check.
 
 Denke daran, dass die gelisteten Checks erst **nach** einem erfolgreichen CI Durchlauf verfügbar sind.
 

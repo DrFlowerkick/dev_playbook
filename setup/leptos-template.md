@@ -14,7 +14,7 @@ Wenn du lokal deinen Projektordner aufgesetzt hast, geht es weiter mit der Einri
 - [github workflows einrichten](#github-workflows-einrichten)
 - [Projektspezifische cargo Konfiguration](#projektspezifische-cargo-konfiguration)
 - [Nützliche Einstellungen für Visual Studio Code (VSC)](#nützliche-einstellungen-für-visual-studio-code-vsc)
-- [release-please Konfiguration anlegen](#release-please-konfiguration-anlegen)
+- [Dockerfile](#dockerfile)
 
 ## Projekt erstellen
 
@@ -82,7 +82,7 @@ npm ci
 
 Dies installiert die in der Datei `package-lock.json` vorgegeben Pakete mit der exakten Versionsnummer.
 
-Damit Playwright die Webseiten in verschiedenen Browsern testet, müssen die entsprechenden Browser Engines installiert werden. Oder man verwendet das Allzweckwerkzeug docker (unter linux gerne auch podman). Lege dazu im Projekt die Datei `scrpts/e2e-testing.sh` mit folgendem Inhalt an:
+Damit Playwright die Webseiten in verschiedenen Browsern testet, müssen die entsprechenden Browser Engines installiert werden. Oder man verwendet das Allzweckwerkzeug docker (unter linux gerne auch podman). Lege dazu im Projekt die Datei `scripts/e2e-testing.sh` mit folgendem Inhalt an:
 
 ```bash
 #!/usr/bin/env bash
@@ -146,7 +146,7 @@ Kopiere den Ordner `github` aus diesem Repo in deinen Projektordner und nenne de
 
 ### Funktionale workflows
 
-Alle funktionalen Workflows starten mit einem `_`. Sie bieten eine gewissese Funktionalität, die von anderen workflows genutzt werden kann. Sie stellen somit wiederverwendbare workflows dar, die in verschiedenen Phasen des Entwicklungsprozesses verwendet werden können. So können bei komplexen Featuren, die selber Sub-Branches benötigen, eigene workflows aus den funktionalen Workflows zusammen gesetzt werden. Als Vorlage hierfür können die workflows von `main` und `development` verwendet werden.
+Alle funktionalen Workflows starten mit einem `_`. Sie bieten eine gewisse Funktionalität, die von anderen workflows genutzt werden kann. Sie stellen somit wiederverwendbare workflows dar, die in verschiedenen Phasen des Entwicklungsprozesses verwendet werden können. So können bei komplexen Features, die selber Sub-Branches benötigen, eigene workflows aus den funktionalen Workflows zusammen gesetzt werden. Als Vorlage hierfür können die workflows von `main` und `development` verwendet werden.
 
 ### Branch workflows
 
@@ -156,9 +156,9 @@ Branch workflows definieren, was passieren soll, wenn mit dem branch interagiert
 - ein pull request auf den Branch erfolgt (`_pr` postfix),
 - oder nach einem bestimmten Zeitplan (`_scheduled` postfix).
 
-### Code veröffentlich mit `publish.yml`
+### Code veröffentlichen mit `publish.yml`
 
-Der Workflow `publish.yml` wird ausgelöst, wein ein `v*.*.*` git tag gesetzt wird. Der Workflow prüft, ob dieser getagte commit mit dem letzten commit auf `main` übereoinstimmt. Wenn ja, dann erfolgt eine Veröffentlichung. Aktuell ist dies ein docker image auf dem github dockerf repository.
+Der Workflow `publish.yml` wird ausgelöst, wein ein `v*.*.*` git tag gesetzt wird. Der Workflow prüft, ob dieser getagte commit mit dem letzten commit auf `main` übereinstimmt. Wenn ja, dann erfolgt eine Veröffentlichung. Aktuell ist dies ein docker image auf dem github docker repository `ghcr.io`.
 
 Mit dem workflow _release-please.yml wird solch ein `v*.*.*` tag automatisch gesetzt, wenn seit dem letzten Aufruf des Workflows commits erfolgt sind, die eine Änderung der Versionierung verursachen. Weitere Details dazu sie [release-please](../workflows/release-please.md).
 
@@ -328,18 +328,79 @@ ignores:
   - "LICENSE"
 ```
 
-## release-please Konfiguration anlegen
+## Dockerfile
 
-```json
-# release-please-config.json
-{
-  "release-type": "rust",
-  "packages": {
-    ".": {
-      "release-type": "rust"
-    }
-  }
-}
+Da Web-Apps üblicherweise über Docker Images verteilt und gehostet werden, brauchen wir im Projektroot ein `Dockerfile`:
+
+```Dockerfile
+# ---------- Stage 1: Build ----------
+FROM rust:1.88-bookworm AS builder
+
+# Install system dependencies
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+  clang \
+  npm \
+  wget \
+  ca-certificates \
+  && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+
+ENV CARGO_TERM_COLOR=always
+
+# Install cargo-binstall, which makes it easier to install other
+# cargo extensions like cargo-leptos
+RUN wget https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz
+RUN tar -xvf cargo-binstall-x86_64-unknown-linux-musl.tgz
+RUN cp cargo-binstall /usr/local/cargo/bin
+
+# get github token from publish.yml and install cargo-leptos
+RUN --mount=type=secret,id=github_token \
+  GITHUB_TOKEN=$(cat /run/secrets/github_token) \
+  cargo binstall cargo-leptos -y
+
+
+# Add the WASM target
+RUN rustup target add wasm32-unknown-unknown
+
+# Set up workdir and copy source
+WORKDIR /app
+COPY . .
+
+# Install frontend dependencies (for Tailwind, daisyUI, etc.)
+# Assumes package.json/package-lock.json in project root
+RUN npm ci
+
+# Build the Leptos app (WASM + SSR) in release mode
+RUN cargo leptos build --release
+
+# ---------- Stage 2: Runtime ----------
+FROM debian:bookworm-slim AS runtime
+
+# Install runtime dependencies (for OpenSSL etc.)
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+  openssl ca-certificates \
+  && apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy runtime files from build container
+COPY --from=builder /app/target/release/NAME_DEINER_APP /app/
+COPY --from=builder /app/target/site /app/site
+#COPY --from=builder /app/Cargo.toml /app/
+
+# Set Leptos runtime environment variables (can be overridden!)
+ENV RUST_LOG="info"
+ENV LEPTOS_ENV="PROD"
+ENV LEPTOS_SITE_ADDR="0.0.0.0:8080"
+ENV LEPTOS_SITE_ROOT="site"
+ENV LEPTOS_OUTPUT_NAME="NAME_DEINER_APP"
+
+# Expose SSR port
+EXPOSE 8080
+
+# Start the Leptos SSR server
+CMD ["/app/NAME_DEINER_APP"]
+
 ```
 
 ---

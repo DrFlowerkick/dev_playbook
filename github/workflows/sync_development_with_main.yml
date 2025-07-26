@@ -2,17 +2,27 @@
 name: 🔁 Sync development with main
 
 on:
+  # Allows manual triggering of the workflow from the GitHub UI
   workflow_dispatch:
+  # Triggers the workflow when a new tag is pushed to the main branch (e.g., by release-please)
+  push:
+    tags:
+      - 'v*.*.*' # Matches tags like v1.0.0, v2.1.5, etc.
+    branches:
+      - main # Ensures the push is specifically on the main branch (redundant but clarifies intent)
 
 jobs:
-  sync:
-    name: Rebase development on main
+  sync_and_create_pr:
+    name: Sync development & Create PR
+    # Runs the job only if triggered manually OR by a tag push on main
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          # We need the full history for the merge operation
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -20,33 +30,69 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          echo "GITHUB_TOKEN_BOT=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV # For potential PR operations with auth
 
-      - name: Fetch origin
+      - name: Create sync branch from development & Fetch main
         run: |
           git fetch origin
+          # Create a temporary branch from origin/development
+          git checkout -b sync/main-to-development origin/development
+          echo "Temporary branch 'sync/main-to-development' created from 'development'."
 
-      - name: Create branch dev-on-main
+      - name: Attempt to merge main into sync branch
+        id: merge_main # To access the success/failure of this step
         run: |
-          git checkout -b dev-on-main origin/development
+          # Attempt to merge main into the temporary branch
+          # --no-ff forces a merge commit, even if fast-forward is possible.
+          # This helps document the integration of main into development as a distinct step.
+          # || true prevents the workflow from immediately failing if a conflict occurs.
+          # We will check the status manually in the next step.
+          echo "Attempting to merge 'main' into 'sync/main-to-development'..."
+          git merge origin/main --no-ff || true
+        shell: bash
 
-      - name: Rebase on main, prefer theirs
+      - name: Check for merge conflicts
+        id: check_conflicts
         run: |
-          git rebase origin/main --strategy=recursive --strategy-option=theirs
+          # Check if the previous merge was successful or had conflicts.
+          # 'git diff --check' exits with an error code if unresolved merge markers are present.
+          if git diff --check --exit-code; then
+            echo "::notice file=.github/workflows/sync_development_with_main.yml::Merge completed successfully without conflicts."
+            echo "NO_CONFLICTS=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error file=.github/workflows/sync_development_with_main.yml::Merge conflicts detected when syncing development with main."
+            echo "::error file=.github/workflows/sync_development_with_main.yml::Workflow will terminate to allow manual conflict resolution."
+            echo "NO_CONFLICTS=false" >> "$GITHUB_OUTPUT"
+            exit 1 # Exit with an error code to mark the workflow as failed
+          fi
+        shell: bash
 
-      - name: Push new sync branch
+      - name: Push new sync branch (only if no conflicts)
+        # This step will only run if no conflicts were detected
+        if: steps.check_conflicts.outputs.NO_CONFLICTS == 'true'
         run: |
-          git push origin dev-on-main --force-with-lease
+          git push origin sync/main-to-development
+        shell: bash
 
-      - name: Create Pull Request (dev-on-main → development)
+      - name: Create Pull Request (sync/main-to-development → development)
+        # This step will also only run if no conflicts were present
+        if: steps.check_conflicts.outputs.NO_CONFLICTS == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          branch: dev-on-main
-          title: "chore(sync): rebase development on main"
-          body: | # pipe symbol is required for multi line string
-            Automatisierter PR zum Synchronisieren von `development` mit `main`.
+          branch: sync/main-to-development
+          title: "chore(sync): Synchronize development with main (Release ${{ github.ref_name }})"
+          # The body message adjusts if the workflow is triggered by a tag push
+          body: |
+            Automated Pull Request to synchronize `development` with the latest changes from `main`.
+            This typically includes the version bump and changelog from the last release.
 
-            **WICHTIG:** Bitte diesen Pull Request mit der Option **"Rebase and merge"** mergen, um eine lineare Historie zu gewährleisten und `development` exakt mit `main` zu synchronisieren.
+            **Please merge this Pull Request using the "Merge pull request" option.**
+            (No squash, no rebase, to preserve the correct history.)
 
-            (Run ID: ${{ github.run_id }})
+            Run ID: ${{ github.run_id }}
+            ${{ github.event_name == 'push' && github.ref_name != '' && format('Release reference: {0}', github.ref_name) || '' }}
           base: development
+          labels: |
+            sync
+            automated

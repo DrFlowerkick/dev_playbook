@@ -79,7 +79,7 @@ webserver:
 * `make fmt`
 * `make dev-example-project`
 
-Wenn ein Fehler angezeigt wie `Makefile:12: *** Fehlender Trenner.  Schluss.`, dann leigt das daran, dass die einzeige durch 4 spaces und nicht einem echten tab dargestellt sind. Um dies zu ändern gehe in vsc auf das Makefile.
+Wenn ein Fehler angezeigt wie `Makefile:12: *** Fehlender Trenner.  Schluss.`, dann liegt das daran, dass die einzeige durch 4 spaces und nicht einem echten tab dargestellt sind. Um dies zu ändern gehe in vsc auf das Makefile.
 
 Dort siehst du etwas wie: `Spaces: 4 | UTF-8 | LF | Makefile`
 Klicke auf "Spaces: 4"

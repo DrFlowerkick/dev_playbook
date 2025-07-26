@@ -1,201 +1,120 @@
-# GitHub Workflow Guide
+# Git Workflow: Geschützte Branches, `release-please` & Saubere Historie
 
-Dieser Leitfaden beschreibt den Git-Workflow für dieses Projekt, einschließlich der Branch-Strategie, Commit-Regeln und dem Release-Prozess mithilfe von [`release-please`](./release-please.md).
+Dieser Guide beschreibt einen sicheren und effektiven Git-Workflow für Projekte, die `main` und `development` als zentrale Branches nutzen, beide durch **Branch Protection Rules** (nur Pull Requests erlaubt) geschützt sind und `release-please` für die Versionsverwaltung und Changelog-Generierung verwendet wird.
 
----
+Dieser Guide eignet sich für Projekte, die mit [`setup_leptos_project.sh`](../scripts/setup_leptos_project.sh) erstellt in mit [`github-project-repo.md`](../setup/github-project-repo.md) in `GitHub` eingerichtet wurden.
 
-## `main` Branch
+## Kernprinzipien
 
-Der `main` Branch dient gleichzeitig als **Release-Branch**. Alle Änderungen in `main` sollen **ausschließlich über Pull Requests** erfolgen.
-
-Die erforderlichen GitHub Actions Workflows (inkl. `release-please`) werden automatisch durch das [`setup_leptos_project.sh`](../scripts/setup_leptos_project.sh) Script eingerichtet. Weitere Details findest du im [Leptos Template Setup Guide](../setup/leptos-template.md#github-workflows-einrichten).
-
----
-
-## `development` Branch
-
-Der `development` Branch dient als zentraler Integrationszweig für neue Features, Bugfixes und sonstige Änderungen, **bevor sie in `main` übernommen werden**. Auch hier gilt: **Keine Direkt-Pushes** – alle Änderungen sollen über Pull Requests erfolgen.
-
-Die verwendeten Workflows sind ebenfalls im Setup-Script enthalten.
+- **`main` ist der Hauptzweig:** Er dient mit `release-please` gleichzeitig als Release Branch.
+- **`development` ist der Start Branch für Entwicklung:** Alle temporären Branches für Features und Fixes werden von `development` abgeleitet.
+- **Temporäre Branches:** Alle Änderungen am Repository (neue Dateien, Dateien anpassen oder entfernen) durch Entwickler erfolgt über temporäre Branches, die zu löschen sind, wenn sie nicht mehr gebraucht werden.
+- **Keine Squash-Merges von `development` nach `main`:** Dies ist entscheidend, um doppelte Einträge in Changelogs bei der Synchronisation zu vermeiden. Wir verwenden stattdessen **normale Merge-Commits**.
+- **Feature-Branches aufräumen:** Die "Sauberkeit" der Commit-Historie wird auf den **Feature-Branches** selbst sichergestellt, bevor sie gemergt werden.
+- **Pull Request-zentrierter Ansatz:** Alle Änderungen an den geschützten Branches (`main` und `development`) müssen über Pull Requests erfolgen.
+- **Notwendige `GitHub` Workflows:** Alle notwendigen Workflows werden über [`setup_leptos_project.sh`](../scripts/setup_leptos_project.sh) bereit gestellt.
 
 ---
 
-## Feature- und Bugfix-Branches
+## Der Workflow in Schritten
 
-Für jedes neue Feature oder jeden Bugfix wird ein **temporärer Branch** auf Basis von `development` erstellt.
+### 1\. Feature-Branch erstellen und entwickeln
 
-### Workflow
-
-1. Branch von `development` aus erstellen
-2. Änderungen vornehmen
-3. Pull Request zurück nach `development`
-4. Prüfen, ob alle github workflows erfolgreich durchgelaufen sind:
-    - Wenn nein, gehe zurück zu 2.
-    - Wenn ja, weiter zu 5.
-5. Pull Request mergen mit `Squash Mode`
-6. Nach Merge des pull requests: temporären Branch löschen (er ist "verbraucht" bzw. ist wie ein abhacktes ToDo in einer ToDo Liste zu betrachten)
-
-Das gilt auch für Änderungen außerhalb des Codes (z. B. Dokumentation, Formatierung etc.).
-
----
-
-## Commits & Development Artefakte
-
-Alle zu trackenden Änderungen – Code, Doku, Konfiguration etc. – gelten als **Development Artefakte**.  
-Für **alle Commits** gilt: Verwende das in der [`release-please`](./release-please.md) Dokumentation beschriebene [Conventional Commits Format](https://www.conventionalcommits.org/), um automatische Versionierung und Changelogs sicherzustellen.
-
----
-
-## 🔁 Git: `development` nach erfolgreichem PR auf den Stand von `main` bringen (mit Branch Protection)
-
-### Ziel
-
-Nach einem erfolgreichen Pull Request von `development` nach `main` soll `development` wieder auf den aktuellen Stand von `main` gebracht werden – **ohne doppelte Commits, ohne Force Push, vollständig PR-basiert**.
-
-> ✅ Dieses Vorgehen ist kompatibel mit **Branch Protection Rules**, da es ausschließlich mit Pull Requests arbeitet und keine `--force`-Pushes verwendet.
-
----
-
-### ✅ Voraussetzungen
-
-- Der PR von `development` nach `main` wurde erfolgreich gemerged.
-- Du arbeitest lokal mit einem Git-Klon des Repos.
-- `origin` zeigt auf das zentrale Remote-Repository.
-- Du hast Schreibrechte auf das Repo.
-- Branch Protection für `development` ist aktiv (z. B. „Require pull request“, „Prevent force push“).
-
----
-
-### 🧼 Schritt-für-Schritt Anleitung für manuelles Vorgehen
-
-#### 1. Stelle sicher, dass du auf dem neuesten Stand bist
+Starte die Entwicklung neuer Features oder Fixes auf einem dedizierten Feature-Branch.
 
 ```bash
-git fetch origin
-```
-
-#### 2. Wechsle in den Branch `development`
-
-```bash
+# Sicherstellen, dass der lokale development Branch aktuell ist
 git checkout development
+git pull origin development
+
+# Neuen Feature-Branch erstellen
+git checkout -b feature/mein-super-feature
 ```
 
-#### 3. Erstelle einen temporären Branch für das Rebase
+### 2\. Feature-Branch aufräumen (Interaktives Rebasen)
+
+Bevor du deinen Feature-Branch zur Code-Review einreichst, bereinige seine Historie lokal. Dies macht deine Commits atomarer und aussagekräftiger.
 
 ```bash
-git checkout -b dev-on-main
+# Interaktiven Rebase starten
+git rebase -i development
 ```
 
-> Du arbeitest nun in einem isolierten Branch, der später per PR nach `development` zurückgeführt wird.
+- **Im geöffneten Editor:** Nutze Befehle wie `reword` (Commit-Nachricht bearbeiten), `squash` (mit vorherigem Commit zusammenfassen) oder `fixup` (mit vorherigem Commit zusammenfassen, Nachricht verwerfen), um deine Commits zu organisieren und zu verbessern. Speichere und schließe die Datei, damit Git den Rebase durchführen kann.
 
-#### 4. Rebase `dev-on-main` auf `main`, mit `main` als Master
+- **Pushe deinen bereinigten Branch:** Da du die Historie umgeschrieben hast, ist ein Force Push notwendig. Verwende immer `--force-with-lease`, um unbeabsichtigtes Überschreiben von Änderungen anderer zu vermeiden.
 
-```bash
-git rebase -X theirs --reapply-cherry-picks origin/main
-```
+  ```bash
+  git push origin feature/mein-super-feature --force-with-lease
+  ```
 
-> ✅ `-X theirs` sorgt dafür, dass bei eventuellen Konflikten die Version aus `main` verwendet wird (also „`main` gewinnt“).
+### 3\. Feature-Branch in `development` mergen (via Pull Request)
 
-#### 5. Push den temporären Branch zum Remote
+Erstelle einen Pull Request (PR) von deinem Feature-Branch nach `development`.
 
-```bash
-git push origin dev-on-main
-```
+- **PR erstellen:** Öffne einen PR von `feature/mein-super-feature` nach `development`.
+- **Review & Checks:** Lasse den Code reviewen und stelle sicher, dass alle CI/CD-Checks erfolgreich sind.
+- **Mergen:** Der Merge dieses PRs nach `development` sollte als **normaler Merge** erfolgen (nicht als Squash-Merge oder Rebase-Merge). Dies bewahrt die Commit-Historie deines Feature-Branches in `development`.
 
----
+### 4\. `development` in `main` mergen (Release-Vorbereitung via Pull Request)
 
-#### 📬 6. Erstelle einen Pull Request: `dev-on-main` → `development`
+Sobald `development` alle für das nächste Release benötigten Features gesammelt hat, wird es in `main` integriert.
 
-- Titel z. B.: `Sync development with main after release`
-- Optionale Reviewer zuweisen
-- PR wie gewohnt durch CI/Checks laufen lassen
+- **PR erstellen:** Erstelle einen Pull Request von `development` nach `main`.
+- **Review & Checks:** Führe Code-Reviews und CI/CD-Checks durch.
+- **Mergen:** Auch hier ist ein **normaler Merge** erforderlich. Dies ermöglicht es `release-please`, die einzelnen Feature-Commits auf `main` zu erkennen und das Changelog korrekt zu generieren.
 
----
+### 5\. `release-please` wird aktiv und aktualisiert `main`
 
-### 🔁 Halb-Automatisiertes Vorgehen: Synchronisation über GitHub Workflow
+Nach dem Merge von `development` nach `main` wird `release-please` (typischerweise über GitHub Actions) ausgelöst.
 
-Statt dem beschrieben Vorgehen kannst du die Synchronisation von `development` mit `main` einfach über den **manuell auslösbaren GitHub Actions Workflow** [`sync_development_with_main.yml`](../github/workflows/sync_development_with_main.yml) durchführen.
+- `release-please` analysiert die neuen Commits auf `main` (die ursprünglichen Feature-Commits von `development`).
+- Es erstellt automatisch einen **neuen Pull Request** (z.B. "Release v1.2.3") auf `main`. Dieser PR enthält:
+  - Den Version Bump in der Versionsdatei (z.B. `Cargo.toml`).
+  - Das generierte Changelog.
+  - Ggf. weitere Release-Artefakte.
 
-### ✅ Ergebnis nach dem Merge
+### 6\. `release-please`-PR nach `main` mergen
 
-- `development` ist **vollständig und sauber synchronisiert mit `main`**
-- Alle Konflikte wurden automatisch mit `main` als Master aufgelöst
-- Keine Force Pushes
-- Kompatibel mit geschütztem Branch
+Überprüfe den von `release-please` erstellten PR. In den meisten Fällen kann dieser PR direkt gemergt werden.
 
----
+- **Mergen:** Führe einen **normalen Merge** für diesen `release-please`-PR nach `main` durch.
+- `main` enthält nun die aktualisierte Version und das Changelog. Ein entsprechendes Release-Tag wird gesetzt.
 
-### 🧹 Optional: Aufräumen nach dem Merge
+### 7\. `main` in `development` zurücksynchronisieren (via Pull Request)
 
-#### Lokalen Branch löschen
+> 💡 **Hinweis:** Der `GitHub` Workflow [`sync_development_with_main.yml`](../github/workflows/sync_development_with_main.yml) führt die folgendes Schritte automatisch aus, sobald `release-please` nach dem merge des `Release PR` den `main` Branch mit einem Version tag markiert. Wenn beim merge Konflikte auftauchen, bricht der Workflow mit einer entsprechenden Fehlermeldung ab. Andernfalls endet er mit der Erstellung des Pull Request auf `development`.
 
-```bash
-git branch -d dev-on-main
-```
+Dies ist der letzte, aber entscheidende Schritt, um den `development`-Branch mit den durch `release-please` auf `main` eingeführten Versionsänderungen und dem Changelog zu aktualisieren.
 
-#### Remote-Branch löschen
+- **Temporären Sync-Branch erstellen:**
 
-```bash
-git push origin --delete dev-on-main
-```
+  ```bash
+  git checkout development
+  git pull origin development # development auf den neuesten Stand bringen
+  git checkout -b sync/main-to-development
+  ```
 
-Alternativ: Aktiviere in den Repository-Einstellungen:
+- **`main` in den Sync-Branch mergen:**
 
-> ✅ „Automatically delete head branches after merge“
+  ```bash
+  git merge main
+  ```
 
----
+  - **Konfliktlösung (falls nötig):** Sollten hierbei Konflikte auftreten (was selten sein sollte, da nur `release-please` `main` direkt ändert), löse diese wie gewohnt.
 
-### 🧠 Warum dieses Vorgehen?
+    ```bash
+    git add .        # Gelöste Konflikte zum Staging-Bereich hinzufügen
+    git commit       # Merge-Commit abschließen
+    ```
 
-| Vorteil                                  | Beschreibung                                             |
-|------------------------------------------|----------------------------------------------------------|
-| ✅ Kein Force-Push nötig                 | Erlaubt bei aktivierter Branch Protection                |
-| ✅ Klarer Workflow über Pull Requests    | PRs bleiben nachvollziehbar und reviewfähig             |
-| ✅ Keine doppelten Commits oder Merge-Müll | Historie bleibt sauber und linear                       |
-| ✅ Vollständig CI-/Review-kompatibel     | Passt zu GitHub Workflows und Reviewprozessen           |
+- **Sync-Branch pushen:**
 
----
+  ```bash
+  git push origin sync/main-to-development
+  ```
 
-### 📦 Cheatsheet
-
-```bash
-git fetch origin
-git checkout development
-git checkout -b dev-on-main
-git rebase -X theirs origin/main
-git push origin dev-on-main
-# → dann PR von dev-on-main nach development erstellen
-```
-
----
-
-### 🧱 Empfehlung
-
-Richte für `development` folgende Branch Protection Rules ein:
-
-- ✅ Require pull request before merging
-- ✅ Require status checks to pass
-- ✅ Prevent force pushes
-- ✅ Prevent branch deletion (optional)
-- ✅ Automatically delete head branches (für dev-on-main etc.)
-
----
-
-
----
-
-## Releases
-
-Releases werden vollständig über [`release-please`](./release-please.md) automatisiert.  
-Der zugehörige Workflow (`_release_please.yml`) wird automatisch eingerichtet.
-
-### Release-Verhalten
-
-- Sobald ein Pull Request in `main` gemerged wird:
-- wird automatisch die Version in `Cargo.toml` erhöht
-- ein neuer Changelog-Eintrag erzeugt
-- ein Release erstellt
-
-> 🛠️ Eine manuelle Anpassung der Versionsnummer ist **nicht nötig**.
+- **Pull Request erstellen:** Erstelle einen Pull Request von `sync/main-to-development` nach `development`.
+- **Mergen:** Merge diesen PR nach `development` (wieder ein **normaler Merge**).
 
 ---
