@@ -324,9 +324,6 @@ EXPOSE 8080
 CMD ["/app/$PROJECT_NAME"]
 EOF
 
-echo "17. Projektname im publish.yml Workflow anpassen"
-sed -i "s|SET_APP_NAME_HERE|$PROJECT_NAME|" .github/workflows/publish.yml
-
 echo "✅ Setup abgeschlossen für Projekt: $PROJECT_NAME"
 echo "➡️ Passe jetzt oder später das README.md für $PROJECT_NAME manuell an."
 echo "Verwende den 'github Project Repo' Guide, um für $PROJECT_NAME ein github Repository zu erstellen."

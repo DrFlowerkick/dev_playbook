@@ -93,6 +93,7 @@ und klicke auf **Run workflow**. Dadurch werden die Konfigurationsdateien erstel
     ".": {
       "changelog-path": "CHANGELOG.md",
       "release-type": "rust",
+      "include-component-in-tag": false,
       "bump-minor-pre-major": false,
       "bump-patch-for-minor-pre-major": false,
       "draft": false,
@@ -108,6 +109,8 @@ und klicke auf **Run workflow**. Dadurch werden die Konfigurationsdateien erstel
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
 }
 ```
+
+> ❗ **Wichtig:** Falls nicht vorhanden, füge die Option `"include-component-in-tag": false,` hinzu, damit ein Version Tag ohne dem Namen deines Projektes erzeugt wird.
 
 In dieser Beispielkonfiguration soll die Datei `public/sw.js` ebenfalls versioniert werden. Dazu muss die Zeile, in der sich das Versionslabel befindet, mit dem tag `// x-release-please-version` markiert werden:
 
