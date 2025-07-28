@@ -49,7 +49,7 @@ git rebase -i main
 
 Hier findest du [Informationen zu Git-Rebase](https://docs.github.com/de/get-started/using-git/about-git-rebase) auf GitHub.
 
-### 4\. Feature-Branch in `main` mergen (Release-Vorbereitung via Pull Request)
+### 3\. Feature-Branch in `main` mergen (Release-Vorbereitung via Pull Request)
 
 Erstelle einen Pull Request (PR) von deinem Feature-Branch nach `main`.
 
@@ -58,6 +58,27 @@ Erstelle einen Pull Request (PR) von deinem Feature-Branch nach `main`.
 - **Mergen:** Der Merge dieses PRs nach `main` sollte als **normaler Merge** (Commits bleiben einzeln erhalten) oder als **Squash-Merge** (Commits werden zu einem Commit zusammen gefasst) erfolgen (nicht Rebase-Merge).
 
 > 💡 **Hinweis:** Vergiss nicht, den temporären Feature Branch nach dem merge lokal und auf Origin zu löschen.
+
+#### Tipps zu Squash-Merge
+
+Wenn `Squash Merge` verwendet wird, werden alle Commits aus dem Feature Branch in einen einzigen Commit "_gesquashed_". Dabei ist zu beachten, das weiterhin das [Conventional Commits](https://www.conventionalcommits.org/) Format eingehalten wird. Ein Beispiel dazu findet man in der [`release-please` Dokumentation](https://github.com/googleapis/release-please#what-if-my-pr-contains-multiple-fixes-or-features):
+
+```text
+feat: adds v4 UUID to crypto
+
+This adds support for v4 UUIDs to the library.
+
+fix(utils): unicode no longer throws exception
+  PiperOrigin-RevId: 345559154
+  BREAKING-CHANGE: encode method no longer throws.
+  Source-Link: googleapis/googleapis@5e0dcb2
+
+feat(utils): update encode to support unicode
+  PiperOrigin-RevId: 345559182
+  Source-Link: googleapis/googleapis@e5eef86
+```
+
+> 💡 **Hinweis:** In GitHub wird bei einem Squash Merge vor jedem gesquashten Commit Kommentar ein `*` gesetzt. Dies muss entfernt werden, damit das Parsen der Commits durch `release-please` korrekt funktioniert. Des Weiteren ist darauf zu achten, das der Pull Request selber auch mit einem `Conventional Commits` Tag versehen werden muss.
 
 ### 4\. `release-please` wird aktiv und aktualisiert `main`
 
