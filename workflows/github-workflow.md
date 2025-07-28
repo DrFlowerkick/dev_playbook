@@ -90,6 +90,10 @@ Nach dem Merge nach `main` wird `release-please` (typischerweise über GitHub Ac
   - Das generierte Changelog.
   - Ggf. weitere Release-Artefakte.
 
+> 💡 **Hinweis:** Wenn `release-please` anders als erwartet arbeitet, können die entsprechenden Dateien lokal in dem temporären `release-please` Branche angepasst werden. Achte darauf, alle von `release-please` aktualisierten Dateien zu überprüfen. Danach den erstellten Release Pull Request entsprechend überarbeiten.
+
+Der Commit Nachricht des Release Pull Requests sollte sicherheitshalber noch ein `chore:` vorweg gestellt werden, damit dieser in späteren `release-please` Durchläufen ignoriert wird.
+
 ### 5\. `release-please`-PR nach `main` mergen
 
 Überprüfe den von `release-please` erstellten PR. In den meisten Fällen kann dieser PR direkt gemergt werden.
