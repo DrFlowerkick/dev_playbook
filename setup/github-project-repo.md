@@ -8,10 +8,9 @@ Dieser Guide geht davon aus, dass du mit dem [Leptos Template](./leptos-template
 - [Optional: Lizenz vom Projekt in github anpassen](#optional-lizenz-vom-projekt-in-github-anpassen)
 - [Personal access token (PAT) erstellen](#-personal-access-token-pat-erstellen)
 - [Secret im Projekt Repository erstellen](#-secret-im-projekt-repository-erstellen)
-- [Workflow Berechtigungen für `Sync development with main` und `release-please` anpassen](#workflow-berechtigungen-für--sync-development-with-main-und-release-please-anpassen)
+- [Workflow Berechtigungen für `release-please` anpassen](#workflow-berechtigungen-für-release-please-anpassen)
 - [Bootstrap release-please](#-bootstrap-release-please)
-- [Branch development von main erstellen](#branch-development-von-main-erstellen)
-- [Branch Protection für main und development erstellen](#branch-protection-für-main-und-development-erstellen)
+- [Branch Protection für main erstellen](#branch-protection-für-main-erstellen)
 - [Projekt in Visual Studio Code öffnen](#projekt-in-visual-studio-code-öffnen)
 
 ## Lokales Repository mit github desktop erstellen
@@ -40,7 +39,7 @@ Du findest diese Einstellungen unter
 
 und dann etwas nach unten scrollen. Setze die Einstellungen wie im Screenshot.
 
-> 💡 **Hinweis:** Der [GitHub Workflow](../workflows/github-workflow.md) sieht nur _normale_ `merge commits` vor. `squash merging` ist zu vermeiden, da es zu **Duplikat Commits** beim resync von `development` führt. `rebase merging` ist im Workflow ebenfalls nicht vorgesehen.
+> 💡 **Hinweis:** Die Option **Automatically delete head branches** löscht auf Origin automatisch temporäre Feature und Fix Branches, wenn ein Pull Request nach `main` durchgeführt wurde. Der lokale temporäre Branch muss aber weiterhin von Hand gelöscht werden.
 
 ![Pull Request Settings](./images/pull_request_settings.png)
 
@@ -62,9 +61,9 @@ Damit der PAT in den Workflows genutzt werden kann, muss er als secret `RELEASE_
 
 Auf jeden Fall den Namen `RELEASE_PLEASE_PAT` verwenden.
 
-## Workflow Berechtigungen für `🔁 Sync development with main` und `release-please` anpassen
+## Workflow Berechtigungen für `release-please` anpassen
 
-Im [`github workflow`](../workflows/github-workflow.md) wird erläutert, dass nach einem erfolgreichen `pull request` von `development` nach `main` die daraus resultierenden Änderungen in `main` wieder auf `development` zurück gespielt werden müssen. Dies ist aufgrund der Funktionsweise von git und aufgrund von **branch protection rules** (s.u.) etwas komplizierter, weswegen hierfür der workflow [`sync_development_with_main.yml`](../github/workflows/sync_development_with_main.yml) erstellt wurde. Dieser workflow wie auch der `release-please` workflow nehmen schreibende Aktionen im repository vor und erzeugen einen `pull request`. Die hierfür notwendigen Workflow Permissions sind unter
+Der [`release-please` Workflow](../github/workflows/_release_please.yml) wie auch der [Bootstrap `release-please` Workflow](../github/workflows/bootstrap_release_please.yml) (siehe nächstes Kapitel) nehmen schreibende Aktionen im Repository vor und erzeugen jeweils einen `pull request`. Die hierfür notwendigen Workflow Permissions sind unter
 
 `GitHub Repo > settings > Actions > General`
 
@@ -118,56 +117,31 @@ const CACHE_NAME = "your_app_name-v0.0.0"; // x-release-please-version
 
 Weitere Infos dazu siehe die entsprechende [`release-please`-Doku](https://github.com/googleapis/release-please/blob/d5f2ca8a2cf32701f1d87a85bbc37493b1db65c2/docs/customizing.md).
 
-## Branch `development` von `main` erstellen
-
-> 💡 **Hinweis:** stelle sicher, dass du bereits **🚀 Bootstrap release-please**durchgeführt hast.
-
-Erstelle in `github` den branch `development`, abgeleitet von `main`.
-
-## Branch Protection für `main` und `development` erstellen
+## Branch Protection für `main` erstellen
 
 > 💡 **Hinweis:** Branch Protection Rules sind in `github` nur bei öffentlichen Repos wirksam.
 
-Sowohl `main` als auch `development` sollen nur über `pull request`s bearbeitet werden. Hierfür sind die folgenden Regeln in `github` je Branch unter
+`main` soll nur über `pull request`s bearbeitet werden. Hierfür sind in `github` unter
 
 `GitHub Repo > ⚙️ Settings > Branches > “Add branch ruleset”`
 
-zu erstellen.
-
-> ⚠️ **Wichtig:** Es muss je branch ein eigenes ruleset erstellt werden, weil bei der Option **Require status checks to pass before merging** (s.u.) branch spezifische Workflows anzugeben sind.
-
-### Branch ruleset für 'main'
-
-Im oberen Bereich Namen angeben, `Enforcement status` setzen und Branch Namen eingeben (ohne `""`), für die das ruleset gelten soll. Übernehme die angegeben Einstellungen.
+Regel wie folgt zu erstellen.
 
 ![Branch ruleset oberer Bereich main](./images/branch_ruleset_main_01.png)
 
+Im oberen Bereich Namen angeben, `Enforcement status` setzen und bei Target Branch `main` eingeben (ohne `""`).
+
 ![Branch ruleset mittlerer Bereich main](./images/branch_ruleset_main_02.png)
+
+Achte bei `Allowed merge methods`, dass nur `Merge` und `Squash` ausgewählt sind.
 
 > 💡 **Hinweis:** Bei der Regel **Require a pull request before merging** kann über **Required approvals** die Anzahl der notwendigen Zustimmungen für einen `pull request` vorgegeben werden. Wenn man nicht alleine arbeitet, sollte dieser Wert **größer 0** sein.
 
 ![Branch ruleset unterer Bereich main](./images/branch_ruleset_main_03.png)
 
-Achte bei `Allowed merge methods`, dass nur `Squash` ausgewählt ist. Die Option `Require status checks to pass` kann erst verwendet werden, wenn durch einen commit CI Workflows ausgeführt wurden. Sobald dies erfolgt ist, empfiehlt es sich, diese hier bei `Add checks` hinzuzufügen. Diese sind aber erst nach erstmaligen Durchlauf verfügbar, so dass diese Option erst später gesetzt werden kann.
+Die Option `Require status checks to pass` kann erst verwendet werden, wenn durch einen commit CI Workflows ausgeführt wurden. Sobald dies erfolgt ist, empfiehlt es sich, diese hier bei `Add checks` hinzuzufügen. Diese sind aber erst nach erstmaligen Durchlauf verfügbar, so dass diese Option erst später gesetzt werden kann.
 
 > ⚠️ **Warnung:** Vergiss nicht, diese checks nachträglich zu setzen, sobald sie einmal durchgelaufen sind.
-
-![Status Checks main](./images/status_checks_main.png)
-
-### Branch ruleset für `development`
-
-Die Regeln für `development` unterscheiden sich nur in zwei Punkten von `main`:
-
-1. Bei **Allowed merge methods** sind **Squash** und **Rebase** erlaubt.
-2. Bei den `required checks` entfällt der `Code Coverage` check.
-
-Denke daran, dass die gelisteten Checks erst **nach** einem erfolgreichen CI Durchlauf verfügbar sind.
-
-![Branch ruleset oberer Bereich development](./images/branch_ruleset_development_01.png)
-
-![Branch ruleset mittlerer Bereich development](./images/branch_ruleset_development_02.png)
-
-![Branch ruleset unterer Bereich development](./images/branch_ruleset_development_03.png)
 
 ## Projekt in Visual Studio Code öffnen
 
@@ -177,7 +151,7 @@ Entweder über `github desktop` oder in der Konsole im Projektordner
 code .
 ```
 
-ausführen. Dann über die integrierte Quellcodeverwaltung den branch `development` pullen.
+ausführen. Dann über die integrierte Quellcodeverwaltung den branch `main` pullen.
 
 ---
 

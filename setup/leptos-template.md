@@ -146,7 +146,7 @@ Kopiere den Ordner `github` aus diesem Repo in deinen Projektordner und nenne de
 
 ### Funktionale workflows
 
-Alle funktionalen Workflows starten mit einem `_`. Sie bieten eine gewisse Funktionalität, die von anderen workflows genutzt werden kann. Sie stellen somit wiederverwendbare workflows dar, die in verschiedenen Phasen des Entwicklungsprozesses verwendet werden können. So können bei komplexen Features, die selber Sub-Branches benötigen, eigene workflows aus den funktionalen Workflows zusammen gesetzt werden. Als Vorlage hierfür können die workflows von `main` und `development` verwendet werden.
+Alle funktionalen Workflows starten mit einem `_`. Sie bieten eine gewisse Funktionalität, die von anderen workflows genutzt werden kann. Sie stellen somit wiederverwendbare workflows dar, die in verschiedenen Phasen des Entwicklungsprozesses verwendet werden können. So können bei komplexen Features, die selber Sub-Branches benötigen, eigene workflows aus den funktionalen Workflows zusammen gesetzt werden. Als Vorlage hierfür können die workflows von `main` verwendet werden.
 
 ### Branch workflows
 

@@ -2,7 +2,7 @@ name: Weekly security + maintenance checks
 
 on:
   schedule:
-    - cron: "0 3 * * 0" # every sunday 03:00 UTC
+    - cron: "0 3 * * 0" # every Sunday 03:00 UTC
 
 jobs:
   marker:
