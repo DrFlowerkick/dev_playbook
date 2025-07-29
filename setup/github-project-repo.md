@@ -39,9 +39,11 @@ Du findest diese Einstellungen unter
 
 und dann etwas nach unten scrollen. Setze die Einstellungen wie im Screenshot.
 
-> 💡 **Hinweis:** Die Option **Automatically delete head branches** löscht auf Origin automatisch temporäre Feature und Fix Branches, wenn ein Pull Request nach `main` durchgeführt wurde. Der lokale temporäre Branch muss aber weiterhin von Hand gelöscht werden.
+> 💡 **Hinweis:** Grundsätzlich soll in dem Workflow jeder Pull Request nach `main` auf Empfehlung von [`release-please`](https://github.com/googleapis/release-please/blob/main/README.md#linear-git-commit-history-use-squash-merge) per `Squash and Merge` erfolgen. Wer sehr strikt sein will, kann hier entsprechend so konfigurieren, dass nur `Squash and Merge` zur Verfügung steht.
 
 ![Pull Request Settings](./images/pull_request_settings.png)
+
+> 💡 **Hinweis:** Die Option **Automatically delete head branches** löscht auf Origin automatisch temporäre Feature und Fix Branches, wenn ein Pull Request nach `main` durchgeführt wurde. Der lokale temporäre Branch muss aber weiterhin von Hand gelöscht werden.
 
 ## 🔑 Personal access token (PAT) erstellen
 
@@ -136,7 +138,7 @@ Im oberen Bereich Namen angeben, `Enforcement status` setzen und bei Target Bran
 
 ![Branch ruleset mittlerer Bereich main](./images/branch_ruleset_main_02.png)
 
-Achte bei `Allowed merge methods`, dass nur `Merge` und `Squash` ausgewählt sind.
+Achte bei `Allowed merge methods`, dass nur `Merge` und `Squash` ausgewählt sind. [`release-please`](https://github.com/googleapis/release-please/blob/main/README.md#linear-git-commit-history-use-squash-merge) empfiehlt `Squash and Merge`. Wer sehr strikt sein will, kann hier entsprechend so konfigurieren, dass nur `Squash and Merge` zur Verfügung steht. In diesem Fall sollte auch die Option `Require linear history` gesetzt werden.
 
 > 💡 **Hinweis:** Bei der Regel **Require a pull request before merging** kann über **Required approvals** die Anzahl der notwendigen Zustimmungen für einen `pull request` vorgegeben werden. Wenn man nicht alleine arbeitet, sollte dieser Wert **größer 0** sein.
 

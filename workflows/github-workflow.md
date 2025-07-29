@@ -8,9 +8,9 @@ Dieser Guide eignet sich für Projekte, die mit [`setup_leptos_project.sh`](../s
 
 - **`main` ist der Hauptzweig:** Er dient mit `release-please` gleichzeitig als Release Branch.
 - **Temporäre Branches:** Alle Änderungen am Repository (neue Dateien, Dateien anpassen oder entfernen) durch Entwickler erfolgt über temporäre Branches, die zu löschen sind, wenn sie nicht mehr gebraucht werden.
-- **Feature-Branches aufräumen:** Die "Sauberkeit" der Commit-Historie wird auf den **Feature-Branches** selbst sichergestellt, bevor sie gemergt werden. Sie können nach `main` mit einem [`merge` Commit](https://docs.github.com/de/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/about-pull-request-merges#merge-your-commits) übertragen werden. Alternativ empfiehlt `release-please` die Verwendung von [`squashed` Commits(https://docs.github.com/de/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/about-pull-request-merges#squash-and-merge-your-commits)]. So lange vor dem Zusammenführen der Branches entweder durch "sauberes" Arbeiten oder durch nachträgliches Aufräumen mit `rebase` die "Sauberkeit" der Commit Historie sichergestellt wird, sind beide Ansätze in Ordnung.
+- **Feature-Branches aufräumen:** Die "Sauberkeit" der Commit-Historie wird auf den **Feature-Branches** selbst sichergestellt, bevor sie gemergt werden. Grundsätzlich empfiehlt sich hierfür ein interaktives rebase bezogen auf `main`.
 - **Temporäre Branches:** Feature und Fix Branches sind temporär und werden nach dem Durchführen des Pull Requests wieder gelöscht. Sie werden nie wieder verwendet.
-- **Pull Request-zentrierter Ansatz:** Alle Änderungen an `main` müssen über Pull Requests erfolgen. `main` wird explizit über ein entsprechendes **Branch Protection Ruleset** geschützt.
+- **Pull Request-zentrierter Ansatz:** Alle Änderungen an `main` müssen über Pull Requests erfolgen. `main` wird explizit über ein entsprechendes **Branch Protection Ruleset** geschützt.  `release-please` empfiehlt hierfür die Verwendung von [`squashed` Commits(https://docs.github.com/de/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/about-pull-request-merges#squash-and-merge-your-commits)], s.auch den [`release-please` Guide](./release-please.md#-nutze-squash-merge).
 - **Notwendige `GitHub` Workflows:** Alle notwendigen Workflows werden über [`setup_leptos_project.sh`](../scripts/setup_leptos_project.sh) bereit gestellt.
 
 ---
@@ -32,7 +32,7 @@ git checkout -b feature/mein-super-feature
 
 ### 2\. Feature-Branch aufräumen (Interaktives Rebasen)
 
-Bevor du deinen Feature-Branch zur Code-Review einreichst, bereinige seine Historie lokal. Dies macht deine Commits atomarer und aussagekräftiger.
+Bevor du deinen Feature-Branch zur Code-Review einreichst, bereinige seine Historie lokal. Dies macht deine Commits atomarer und aussagekräftiger. Des Weiteren ist dies sinnvoll, wenn zwischenzeitlich weitere Commits zu `main` hinzugefügt wurden, denn so sicherst du eine lineare Commit Historie.
 
 ```bash
 # Interaktiven Rebase starten
@@ -55,55 +55,37 @@ Erstelle einen Pull Request (PR) von deinem Feature-Branch nach `main`.
 
 - **PR erstellen:** Öffne einen PR von `feature/mein-super-feature` nach `main`.
 - **Review & Checks:** Lasse den Code reviewen und stelle sicher, dass alle CI/CD-Checks erfolgreich sind.
-- **Mergen:** Der Merge dieses PRs nach `main` sollte als **normaler Merge** (Commits bleiben einzeln erhalten) oder als **Squash-Merge** (Commits werden zu einem Commit zusammen gefasst) erfolgen (nicht Rebase-Merge).
+- **Mergen:** Der Merge dieses PRs nach `main` sollte als [**Squash-Merge**](./release-please.md#-nutze-squash-merge) (Commits werden zu einem Commit zusammen gefasst) erfolgen.
 
 > 💡 **Hinweis:** Vergiss nicht, den temporären Feature Branch nach dem merge lokal und auf Origin zu löschen.
 
-#### Tipps zu Squash-Merge
-
-Wenn `Squash Merge` verwendet wird, werden alle Commits aus dem Feature Branch in einen einzigen Commit "_gesquashed_". Dabei ist zu beachten, das weiterhin das [Conventional Commits](https://www.conventionalcommits.org/) Format eingehalten wird. Ein Beispiel dazu findet man in der [`release-please` Dokumentation](https://github.com/googleapis/release-please#what-if-my-pr-contains-multiple-fixes-or-features):
-
-```text
-feat: adds v4 UUID to crypto
-
-This adds support for v4 UUIDs to the library.
-
-fix(utils): unicode no longer throws exception
-  PiperOrigin-RevId: 345559154
-  BREAKING-CHANGE: encode method no longer throws.
-  Source-Link: googleapis/googleapis@5e0dcb2
-
-feat(utils): update encode to support unicode
-  PiperOrigin-RevId: 345559182
-  Source-Link: googleapis/googleapis@e5eef86
-```
-
-> 💡 **Hinweis:** In GitHub wird bei einem Squash Merge vor jedem gesquashten Commit Kommentar ein `*` gesetzt. Dies muss entfernt werden, damit das Parsen der Commits durch `release-please` korrekt funktioniert. Des Weiteren ist darauf zu achten, das der Pull Request selber auch mit einem `Conventional Commits` Tag versehen werden muss.
-
-### 4\. `release-please` wird aktiv und aktualisiert `main`
+### 4\. `release-please` wird aktiv und erstellt einen [`Release PR`](./release-please.md#-release-pull-request)
 
 Nach dem Merge nach `main` wird `release-please` (typischerweise über GitHub Actions) ausgelöst.
 
 - `release-please` analysiert die neuen Commits auf `main` (die ursprünglichen Feature-Commits aus dem temporären Branch).
-- Es erstellt automatisch einen **neuen Pull Request** (z.B. "Release v1.2.3") auf `main`. Dieser PR enthält:
+- Es erstellt automatisch einen **neuen Release Pull Request** (z.B. "Release v1.2.3") auf `main`. Dieser PR enthält:
   - Den Version Bump in der Versionsdatei (z.B. `Cargo.toml`).
   - Das generierte Changelog.
   - Ggf. weitere Release-Artefakte.
 
-> 💡 **Hinweis:** Wenn `release-please` anders als erwartet arbeitet, können die entsprechenden Dateien lokal in dem temporären `release-please` Branche angepasst werden. Achte darauf, alle von `release-please` aktualisierten Dateien zu überprüfen. Danach den erstellten Release Pull Request entsprechend überarbeiten.
+Sollte bereits ein `Release PR` existieren, wird dieser mit den neuen Commits auf `main` aktualisiert und die oben genannten Dateien entsprechend angepasst.
 
-Der Commit Nachricht des Release Pull Requests sollte sicherheitshalber noch ein `chore:` vorweg gestellt werden, damit dieser in späteren `release-please` Durchläufen ignoriert wird.
+> 💡 **Hinweis:** Wenn `release-please` anders als erwartet arbeitet, können die entsprechenden Dateien lokal in dem temporären `release-please` Branch angepasst werden. Achte darauf, alle von `release-please` aktualisierten Dateien zu überprüfen. Danach ggf. auch den erstellten `Release PR` Titel und summary entsprechend überarbeiten.
 
-### 5\. `release-please`-PR nach `main` mergen
+Nun kannst du entweder weitere Feature oder Fix Branches erstellen und nach `main` mergen, oder ein Release durchführen, in dem du den `Release PR` nach `main` mergt.
 
-Überprüfe den von `release-please` erstellten PR. In den meisten Fällen kann dieser PR direkt gemergt werden.
+### 5\. `Release PR` nach `main` mergen
 
-- **Mergen:** Führe einen **normalen Merge** für diesen `release-please`-PR nach `main` durch.
-- `main` enthält nun die aktualisierte Version und das Changelog. Ein entsprechendes Release-Tag wird gesetzt.
+Überprüfe den von `release-please` erstellten PR. In den meisten Fällen kann dieser PR direkt gemergt werden, sobald alle gewünschten Feature und Fixes nach `main` per Pull Request gepusht wurden.
+
+- **Mergen:** Führe einen **Squash Merge** für diesen `Release PR` nach `main` durch.
+- `main` enthält nun die aktualisierte Version und das Changelog. Ein entsprechendes Release-Tag wird auf den Commit gesetzt.
+- Stelle sicher, dass der temporäre Branch von `release-please` gelöscht wird.
 
 ### 6\. Publishing über Docker Image
 
-Wenn deine App über ein Docker Image veröffentlicht werden soll, dann ist jetzt der Bau und die Veröffentlichung des Docker Images anzustoßen (typischerweise über GitHub Actions). Der Workflow [`publish.yml`](../github/workflows/publish.yml) reagiert aus das gesetzte Release-Tag und führt die folgenden Schritte aus:
+Wenn deine App über ein Docker Image veröffentlicht werden soll, dann ist jetzt der Bau und die Veröffentlichung des Docker Images anzustoßen (typischerweise über GitHub Actions). Der Workflow [`publish.yml`](../github/workflows/publish.yml) reagiert aus das von `release-please` gesetzte Release-Tag und führt die folgenden Schritte aus:
 
 - **Dockerfile** nutzen, um ein Docker Image zu erstellen.
 - Taggen des Docker Image mit der Version und dem `latest` Tag.
